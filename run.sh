@@ -7,8 +7,8 @@ export HEAD_NODE=1
 
 # Run llumnix api server
 HOST="localhost"
-PORT="30050"
-INITIAL_INSTANCES=4
+PORT="8003"
+INITIAL_INSTANCES=1
 MODEL_PATH="/root/models/facebook/opt-6.7b/"
 MAX_MODEL_LEN=2048
 

@@ -78,7 +78,7 @@ class MigrationWorker(Worker):
             # https://docs.nvidia.com/cuda/wsl-user-guide/index.html#known-limitations-for-linux-cuda-applications
             logger.warning("Using 'pin_memory=False' as WSL is detected. "
                            "This may slow down the performance.")
-        migration_cache_size = self.cache_engine.block_size * self.cache_engine.num_heads * self.cache_engine.head_size
+        migration_cache_size = self.cache_engine.block_size * self.cache_engine.num_kv_heads * self.cache_engine.head_size
         self.rpc_dtype = self.cache_engine.dtype
         if self.cache_engine.dtype in NUMPY_SUPPORT_DTYPES:
             self.rpc_dtype = self.cache_engine.dtype
@@ -111,8 +111,8 @@ class MigrationWorker(Worker):
         with torch.cuda.stream(self.migration_stream):
             for layer_idx in range(self.cache_engine.num_layers):
                 for idx, block_num in enumerate(blocks):
-                    dummy_key_cpu[idx][layer_idx].copy_(self.gpu_cache[layer_idx][0][block_num])
-                    dummy_value_cpu[idx][layer_idx].copy_(self.gpu_cache[layer_idx][1][block_num])
+                    dummy_key_cpu[idx][layer_idx].copy_(self.gpu_cache[layer_idx][0][block_num].view(-1))
+                    dummy_value_cpu[idx][layer_idx].copy_(self.gpu_cache[layer_idx][1][block_num].view(-1))
         torch.cuda.Stream.synchronize(self.migration_stream)
         return (dummy_key_cpu.to(self.rpc_dtype).numpy(), dummy_value_cpu.to(self.rpc_dtype).numpy())
 
@@ -124,11 +124,12 @@ class MigrationWorker(Worker):
         v = rpc_numpy_cache[1]
         dummy_key.copy_(torch.from_numpy(k))
         dummy_value.copy_(torch.from_numpy(v))
+        kv_cache_shape = self.gpu_cache[0][0][0]
         with torch.cuda.stream(self.migration_stream):
             for layer_idx in range(self.cache_engine.num_layers):
                 for idx, block_num in enumerate(blocks):
-                    self.gpu_cache[layer_idx][0][block_num].copy_(dummy_key[idx][layer_idx])
-                    self.gpu_cache[layer_idx][1][block_num].copy_(dummy_value[idx][layer_idx])
+                    self.gpu_cache[layer_idx][0][block_num].copy_(dummy_key[idx][layer_idx].view(kv_cache_shape))
+                    self.gpu_cache[layer_idx][1][block_num].copy_(dummy_value[idx][layer_idx].view(kv_cache_shape))
         torch.cuda.Stream.synchronize(self.migration_stream)
 
     def send_cpu_cache_v2(self, blocks: List[int]):
