@@ -578,21 +578,42 @@ def sample_sharegpt_requests(
     prompts = []
     prompt_lens = []
     response_lens = []
+
     with open(dataset_path) as f:
-        for line in f:
-            data = json.loads(line)
-            if len(data["conversations"]) >= 2:
-                prompt = data["conversations"][0]["value"]
-                res = data["conversations"][1]["value"]
-                prompt_token_ids = tokenizer(prompt).input_ids
-                completion_token_ids = tokenizer(res).input_ids
-                if len(prompt_token_ids) + len(completion_token_ids) < max_seqlen and \
-                    len(prompt_token_ids) > 0 and len(completion_token_ids) > 0:
-                    prompts.append(prompt)
-                    prompt_lens.append(len(prompt_token_ids))
-                    response_lens.append(len(completion_token_ids))
-            if len(prompts)>num_requests:
-                break
+        dataset = json.load(f)
+
+    # Filter out the conversations with less than 2 turns.
+    dataset = [data for data in dataset if len(data["conversations"]) >= 2]
+    # Only keep the first two turns of each conversation.
+    dataset = [(data["conversations"][0]["value"],
+                data["conversations"][1]["value"]) for data in dataset]
+        
+    # Shuffle the dataset.
+    random.shuffle(dataset)
+    
+    for i in range(len(dataset)):
+        if len(prompts) == num_requests:
+            break
+
+        # Tokenize the prompts and completions.
+        prompt = dataset[i][0]
+        prompt_token_ids = tokenizer(prompt).input_ids
+        completion = dataset[i][1]
+        completion_token_ids = tokenizer(completion).input_ids
+        prompt_len = len(prompt_token_ids)
+        output_len = len(completion_token_ids)
+        if prompt_len < 4 or output_len < 4:
+            # Prune too short sequences.
+            continue
+        if prompt_len > 1024 or prompt_len + output_len > 2048:
+            # Prune too long sequences.
+            continue 
+        if len(prompt_token_ids) + len(completion_token_ids) < max_seqlen and \
+            len(prompt_token_ids) > 0 and len(completion_token_ids) > 0:
+            prompts.append(prompt)
+            prompt_lens.append(len(prompt_token_ids))
+            response_lens.append(len(completion_token_ids))
+
     sampled_ids = [random.randint(0, len(prompts) - 1) for _ in range(num_requests)]
     sampled_prompts = [prompts[idx] for idx in sampled_ids]
     sampled_prompt_lens = [prompt_lens[idx] for idx in sampled_ids]
