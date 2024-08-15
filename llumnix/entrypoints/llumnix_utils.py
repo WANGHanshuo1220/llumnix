@@ -160,15 +160,20 @@ def init_request_output_queue() -> RayQueue:
 def init_llumnix_components(engine_manager_args: EngineManagerArgs,
                             engine_args: AsyncEngineArgs) -> Tuple[LLMEngineManager, List[Llumlet], RayQueue]:
     assert engine_args.engine_use_ray and engine_args.worker_use_ray, \
-            ("In Llumnix, engine and worker must be ray actor in orther to run step and migrate concurrently.")
+            ("In Llumnix, engine and worker must be ray actor in order to run step and migrate concurrently.")
 
+    # Init global manager which include global scheduler
     engine_manager = init_manager(engine_manager_args)
     logger.info("Init LLMEngineManager done")
+
+    # Init llumlets which are real executor located on each GPU device
+    # and also init request output queue
     instance_ids, llumlets = init_llumlets(engine_manager_args, engine_args)
     request_output_queue = init_request_output_queue()
     logger.info("Init request_output_queue done")
     ray.get([llumlet.is_ready.remote() for llumlet in llumlets])
     logger.info("Init Llumlets done")
+
     retry_manager_method_sync(engine_manager.scale_up.remote, 'scale_up', instance_ids, llumlets)
     logger.info("Scale up instance done")
     # We now call run_engine_loop after llumlet's creation.

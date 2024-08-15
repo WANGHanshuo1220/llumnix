@@ -25,6 +25,7 @@ HOST="localhost"
 PORT="8003"
 INITIAL_INSTANCES=$gpu_count
 MODEL_PATH="/root/models/facebook/opt-6.7b/"
+DRAFT_MODEL_PATH="/root/models/facebook/opt-125m/"
 MAX_MODEL_LEN=2048
 
 python -m llumnix.entrypoints.vllm.api_server \
@@ -35,6 +36,9 @@ python -m llumnix.entrypoints.vllm.api_server \
     --model $MODEL_PATH \
     --engine-use-ray \
     --worker-use-ray \
+    --speculative-model $DRAFT_MODEL_PATH \
+    --num-speculative-tokens 5 \
+    --use-v2-block-manager \
     --max-model-len $MAX_MODEL_LEN &
 server_pid=$!
 
@@ -43,7 +47,7 @@ echo "Run llumnix api server successfully"
 # Run llumnix server benchmark
 cd benchmark
 NUM_PROMPTS=10
-QPS=1
+QPS=0.1
 FILE="/root/vllm/ShareGPT_V3_unfiltered_cleaned_split.json"
 
 # Check if dataset exists
@@ -58,16 +62,16 @@ fi
 # Wait 180 seconds for server to initialize...
 timeout 180 bash -c 'until curl -s localhost:8003/is_ready > /dev/null; do sleep 1; done' || exit 1
 echo "Server ready."
-python benchmark_serving.py \
-    --ip_ports $HOST:$PORT \
-    --tokenizer $MODEL_PATH \
-    --random_prompt_count $NUM_PROMPTS \
-    --dataset_type "sharegpt" \
-    --dataset_path $FILE\
-    --qps $QPS \
-    --distribution "poisson" \
-    --log_latencies \
-    --fail_on_response_failure
+# python benchmark_serving.py \
+#     --ip_ports $HOST:$PORT \
+#     --tokenizer $MODEL_PATH \
+#     --random_prompt_count $NUM_PROMPTS \
+#     --dataset_type "sharegpt" \
+#     --dataset_path $FILE\
+#     --qps $QPS \
+#     --distribution "poisson" \
+#     --log_latencies \
+#     --fail_on_response_failure
 
 kill $server_pid
 
