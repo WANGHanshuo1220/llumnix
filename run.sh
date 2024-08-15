@@ -17,9 +17,13 @@ export HEAD_NODE_IP=$HEAD_NODE_IP_ADDRESS
 export HEAD_NODE=1
 
 # Run llumnix api server
+# Get GPU count
+gpu_count=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+echo "Detected GPUs: $gpu_count"
+
 HOST="localhost"
 PORT="8003"
-INITIAL_INSTANCES=4
+INITIAL_INSTANCES=$gpu_count
 MODEL_PATH="/root/models/facebook/opt-6.7b/"
 MAX_MODEL_LEN=2048
 

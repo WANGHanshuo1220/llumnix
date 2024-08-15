@@ -228,6 +228,9 @@ if __name__ == "__main__":
     parser.add_argument('--launch-ray-cluster',
                         action='store_true',
                         help='if launch ray cluster in api server')
+    parser.add_argument('--launch-ray',
+                        action='store_true',
+                        help='if launch ray cluster in api server')
 
     parser = EngineManagerArgs.add_cli_args(parser)
     parser = AsyncEngineArgs.add_cli_args(parser)
