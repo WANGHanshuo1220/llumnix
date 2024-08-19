@@ -46,8 +46,8 @@ echo "Run llumnix api server successfully"
 
 # Run llumnix server benchmark
 cd benchmark
-NUM_PROMPTS=10
-QPS=0.1
+NUM_PROMPTS=1
+QPS=1
 FILE="/root/vllm/ShareGPT_V3_unfiltered_cleaned_split.json"
 
 # Check if dataset exists
@@ -62,16 +62,16 @@ fi
 # Wait 180 seconds for server to initialize...
 timeout 180 bash -c 'until curl -s localhost:8003/is_ready > /dev/null; do sleep 1; done' || exit 1
 echo "Server ready."
-# python benchmark_serving.py \
-#     --ip_ports $HOST:$PORT \
-#     --tokenizer $MODEL_PATH \
-#     --random_prompt_count $NUM_PROMPTS \
-#     --dataset_type "sharegpt" \
-#     --dataset_path $FILE\
-#     --qps $QPS \
-#     --distribution "poisson" \
-#     --log_latencies \
-#     --fail_on_response_failure
+python benchmark_serving.py \
+    --ip_ports $HOST:$PORT \
+    --tokenizer $MODEL_PATH \
+    --random_prompt_count $NUM_PROMPTS \
+    --dataset_type "sharegpt" \
+    --dataset_path $FILE\
+    --qps $QPS \
+    --distribution "poisson" \
+    --log_latencies \
+    --fail_on_response_failure
 
 kill $server_pid
 
@@ -79,3 +79,23 @@ echo "Stopping ray server"
 ray stop
 echo "Ray server stopped."
 
+# 初始化累加变量
+sum_a=0
+sum_b=0
+
+# 逐行读取文件
+while IFS=' ' read -r a b; do
+    # 累加a和b
+    sum_a=$((sum_a + a))
+    sum_b=$((sum_b + b))
+done < "$filename"
+
+# 计算b/a
+if [ "$sum_a" -ne 0 ]; then
+    ratio=$(echo "scale=2; $sum_b / $sum_a" | bc)
+    echo "Sum of a: $sum_a"
+    echo "Sum of b: $sum_b"
+    echo "b / a: $ratio"
+else
+    echo "Sum of a is 0, cannot divide by zero."
+fi

@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 from vllm.sequence import SequenceGroup
 from vllm.core.block_manager_v1 import BlockSpaceManagerV1, BlockTable
+from vllm.core.block_manager_v2 import BlockSpaceManagerV2
 from vllm.core.scheduler import (Scheduler, SequenceGroupMetadata, SchedulerOutputs,
                                  PreemptionMode, SequenceStatus)
 
@@ -30,7 +31,7 @@ from llumnix.backends.vllm.utils import scheduler_lock
 logger = init_logger(__name__)
 
 # TODO(ZeldaHuang): adapt prefix cache and sliding window, now use v1 manager
-class BlockManagerLlumnix(BlockSpaceManagerV1):
+class BlockManagerLlumnix(BlockSpaceManagerV2):
     def get_free_blocks(self, num_required_blocks: int) -> BlockTable:
         num_free_gpu_blocks = self.gpu_allocator.get_num_free_blocks()
         if (num_free_gpu_blocks - num_required_blocks <

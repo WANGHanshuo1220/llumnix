@@ -63,7 +63,7 @@ class LLMEngineLlumnix(LLMEngine):
     ) -> "LLMEngineLlumnix":
         """Creates an LLM engine from the engine arguments."""
         # Create the engine configs.
-        detect_unsupported_feature(engine_args)
+        # detect_unsupported_feature(engine_args)
         engine_config = engine_args.create_engine_config()
         engine_config.parallel_config.placement_group = placement_group
         # Initialize the cluster and specify the executor class.
